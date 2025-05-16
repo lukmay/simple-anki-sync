@@ -14,7 +14,9 @@ Simple Anki Sync for Obsidian delivers the most straightforward way to keep your
 With a single command, you can instantly push your notes to AnkiConnect—no background daemons, no surprises.
 Just run a command to sync the entire vault or your current file, and watch your flashcards update in seconds. Study smarter, stay focused, and let the plugin handle the rest.
 
-
+For useage make sure Anki is running & User the following commands:  
+`Sync current file With Anki`  
+`Sync entire vault With Anki`  
 
 
 ___
@@ -65,8 +67,8 @@ ___
 
 ## Main Feature: Obsidian → Anki Sync
 
-Commands:
-`Sync current file With Anki`
+Commands:    
+`Sync current file With Anki`   
 `Sync entire vault With Anki`
 
 Sync any minimal Markdown table from Obsidian into Anki as Basic cards. Just tag your note with the deck name and subdeck:
