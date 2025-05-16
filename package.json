@@ -1,0 +1,33 @@
+{
+  "name": "simple-anki-sync",
+  "version": "0.2.0",
+  "description": "Personal Anki Sync Plugin for Obsidian.",
+  "main": "main.js",
+  "scripts": {
+    "dev": "rollup -c rollup.config.mjs -w",
+    "build": "rollup -c rollup.config.mjs --environment NODE_ENV:production"
+  },
+  "keywords": [
+    "obsidian-plugin",
+    "anki",
+    "sync",
+    "markdown",
+    "tables",
+    "images",
+    "deletion",
+    "sync-plugin",
+    "obsidian"
+  ],
+  "author": "Lukas Mayr",
+  "license": "MIT",
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^28.0.3",
+    "@rollup/plugin-node-resolve": "^16.0.1",
+    "@rollup/plugin-typescript": "^12.1.2",
+    "@types/node": "^18.11.18",
+    "obsidian": "^1.1.16",
+    "rollup": "^4.40.2",
+    "tslib": "^2.8.1",
+    "typescript": "^5.8.3"
+  }
+}

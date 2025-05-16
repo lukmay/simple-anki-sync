@@ -1,0 +1,10 @@
+{
+  "id": "simple-anki-sync",
+  "name": "Simple Anki Sync",
+  "version": "1.0.0",
+  "minAppVersion": "0.15.0",
+  "description": "The simplest way of syncing simple Flashchards with Anki.",
+  "author": "Lukas Mayr",
+  "authorUrl": "lukas-mayr.com",
+  "isDesktopOnly": true
+}

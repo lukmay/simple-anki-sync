@@ -1,0 +1,56 @@
+# Node.js dependencies
+/node_modules/
+
+# Build outputs
+/dist/
+/build/
+/lib/
+/out/
+
+# TypeScript cache
+/*.tsbuildinfo
+
+# Optional npm cache directory
+.npm/
+
+# Optional eslint cache
+.eslintcache
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment variables
+.env
+.env.*.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# Coverage reports
+/coverage/
+
+# Testing
+/junit-report.xml
+/karma-coverage/
+
+# Optional: lockfiles if you prefer Yarn/PNPM
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Miscellaneous
+*.log
+*.zip
+*.tar.gz
