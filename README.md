@@ -65,6 +65,10 @@ ___
 
 ## Main Feature: Obsidian → Anki Sync
 
+Commands:
+`Sync current file With Anki`
+`Sync entire vault With Anki`
+
 Sync any minimal Markdown table from Obsidian into Anki as Basic cards. Just tag your note with the deck name and subdeck:
 
 `#anki/MyDeck/Subdeck`
