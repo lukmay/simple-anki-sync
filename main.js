@@ -403,6 +403,20 @@ class SimpleAnkiSyncPlugin extends obsidian.Plugin {
                 }
             }
         }
+        // Remove old IDs and Anki-Cards
+        const toDelete = existingIds.filter(id => !newIds.includes(id));
+        if (toDelete.length) {
+            await this.anki.deleteNotes(toDelete);
+            for (const id of toDelete) {
+                const commentLine = `<!--ANKI_NOTE_ID:${id}-->`;
+                const idx = lines.findIndex(l => l.trim() === commentLine);
+                if (idx !== -1) {
+                    lines.splice(idx, 1);
+                    if (idx < notes.length)
+                        offset--;
+                }
+            }
+        }
         const updated = lines.join('\n');
         if (updated !== orig) {
             await this.app.vault.modify(file, updated);
