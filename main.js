@@ -162,9 +162,12 @@ class AnkiService {
             return [];
         }
     }
-    async storeMedia(filename, path) {
+    async storeMediaBase64(filename, data) {
         try {
-            const result = await sendRequest('storeMediaFile', { filename, path });
+            const result = await sendRequest('storeMediaFile', {
+                filename,
+                data, // the base64 payload
+            });
             return typeof result === 'string' ? result : filename;
         }
         catch (err) {
@@ -220,6 +223,7 @@ class SimpleAnkiSyncPlugin extends obsidian.Plugin {
     onunload() {
         console.log('Unloading Simple Anki Sync Plugin');
     }
+    // Splits a table row into its cells
     splitTableRow(row) {
         const clean = row.trim().replace(/^\||\|$/g, '');
         const cells = [];
@@ -228,20 +232,17 @@ class SimpleAnkiSyncPlugin extends obsidian.Plugin {
         let inInlineMath = false; // $…$
         let inBlockMath = false; // $$…$$
         for (let i = 0; i < clean.length; i++) {
-            // Toggle Block-Math
             if (!inInlineMath && clean.slice(i, i + 2) === '$$') {
                 inBlockMath = !inBlockMath;
                 buf += '$$';
                 i++;
                 continue;
             }
-            // Toggle Inline-Math (nur wenn nicht im Block-Math)
             if (!inBlockMath && clean[i] === '$') {
                 inInlineMath = !inInlineMath;
                 buf += '$';
                 continue;
             }
-            // Toggle Obsidian-Embed
             if (!inBrackets && clean.slice(i, i + 2) === '[[') {
                 inBrackets = true;
                 buf += '[[';
@@ -255,13 +256,11 @@ class SimpleAnkiSyncPlugin extends obsidian.Plugin {
                 continue;
             }
             const ch = clean[i];
-            // Backslash-escaped Pipe
             if (ch === '\\' && clean[i + 1] === '|') {
                 buf += '|';
                 i++;
                 continue;
             }
-            // Nur außerhalb aller Kontexte splitten
             if (ch === '|' && !inBrackets && !inInlineMath && !inBlockMath) {
                 cells.push(buf.trim());
                 buf = '';
@@ -270,9 +269,9 @@ class SimpleAnkiSyncPlugin extends obsidian.Plugin {
             buf += ch;
         }
         cells.push(buf.trim());
-        // Leere Zellen nur wegwerfen, wenn mehr als eine Zelle da ist
         return cells.filter((c) => c !== '' || cells.length === 1);
     }
+    // Parses the content of a file and extracts notes and deck name
     parseNotesFromContent(content, file) {
         var _a, _b;
         const tagMatch = content.match(DECK_TAG);
@@ -283,25 +282,20 @@ class SimpleAnkiSyncPlugin extends obsidian.Plugin {
             const h = lines[i];
             const sep = lines[i + 1];
             const d = lines[i + 2];
-            // 1. Erkenne grob Header, Separator, Data
             if (h.trim().startsWith('|') &&
                 sep.match(/^\|\s*-{3,}\s*\|$/) &&
                 d.trim().startsWith('|')) {
-                // 2. Prüfe, dass Header und Data **je eine** Zelle haben
                 const headerCells = this.splitTableRow(h);
                 const dataCells = this.splitTableRow(d);
                 if (headerCells.length !== 1 || dataCells.length !== 1) {
                     i++;
                     continue;
                 }
-                // 3. Stelle sicher, dass **keine** weitere Tabellen-Zeile folgt
                 const nextLine = lines[i + 3];
                 if (nextLine === null || nextLine === void 0 ? void 0 : nextLine.trim().startsWith('|')) {
-                    // eine weitere Zeile -> ganze Tabelle ignorieren
                     i++;
                     continue;
                 }
-                // 4. Extrahiere Front/Back und optionalen bestehenden Anki-ID-Kommentar
                 let existingId;
                 let endLine = i + 2;
                 const maybeComment = lines[i + 3];
@@ -318,7 +312,6 @@ class SimpleAnkiSyncPlugin extends obsidian.Plugin {
                     startLine: i,
                     endLine,
                 });
-                // Überspringe alle Zeilen dieser Tabelle (inkl. Kommentar)
                 i = endLine;
             }
         }
@@ -329,18 +322,20 @@ class SimpleAnkiSyncPlugin extends obsidian.Plugin {
         const uploads = [];
         const matches = Array.from(text.matchAll(IMAGE_EMBED));
         for (const m of matches) {
-            const [md, path, size] = m;
-            const tF = this.app.vault.getAbstractFileByPath(path);
-            if (tF instanceof obsidian.TFile) {
-                const abs = this.anki.resolveAbsolutePath(path);
-                if (abs) {
-                    uploads.push({ filePath: abs, ankiFileName: tF.name });
-                    const tag = size
-                        ? `<img src="${tF.name}" width="${size}">`
-                        : `<img src="${tF.name}">`;
-                    out = out.replace(md, tag);
-                }
-            }
+            const [md, linkPath, size] = m;
+            const imageFile = this.app.metadataCache.getFirstLinkpathDest(linkPath, file.path);
+            if (!(imageFile instanceof obsidian.TFile))
+                continue;
+            const buffer = await this.app.vault.readBinary(imageFile);
+            const dataBase64 = Buffer.from(buffer).toString('base64');
+            uploads.push({
+                ankiFileName: imageFile.name,
+                dataBase64,
+            });
+            const tag = size
+                ? `<img src="${imageFile.name}" width="${size}">`
+                : `<img src="${imageFile.name}">`;
+            out = out.replace(md, tag);
         }
         return { content: out, mediaToUpload: uploads };
     }
@@ -376,7 +371,7 @@ class SimpleAnkiSyncPlugin extends obsidian.Plugin {
             const frontMed = await this.processMedia(note.front, file);
             const backMed = await this.processMedia(note.back, file);
             for (const u of [...frontMed.mediaToUpload, ...backMed.mediaToUpload]) {
-                await this.anki.storeMedia(u.ankiFileName, u.filePath);
+                await this.anki.storeMediaBase64(u.ankiFileName, u.dataBase64);
             }
             // LaTeX
             let frontHtml = this.convertLatexDelimiters(frontMed.content);

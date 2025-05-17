@@ -157,9 +157,15 @@ export class AnkiService {
     }
   }
 
-  async storeMedia(filename: string, path: string): Promise<string | null> {
+  async storeMediaBase64(
+    filename: string,
+    data: string
+  ): Promise<string | null> {
     try {
-      const result = await sendRequest('storeMediaFile', { filename, path });
+      const result = await sendRequest('storeMediaFile', {
+        filename,
+        data, // the base64 payload
+      });
       return typeof result === 'string' ? result : filename;
     } catch (err) {
       new Notice(`Failed to store media "${filename}": ${err}`);

@@ -153,22 +153,31 @@ private parseNotesFromContent(
     file: TFile
   ): Promise<ProcessedMediaResult> {
     let out = text;
-    const uploads: { filePath: string; ankiFileName: string }[] = [];
+    const uploads: { ankiFileName: string; dataBase64: string }[] = [];
+
     const matches = Array.from(text.matchAll(IMAGE_EMBED));
     for (const m of matches) {
-      const [md, path, size] = m;
-      const tF = this.app.vault.getAbstractFileByPath(path);
-      if (tF instanceof TFile) {
-        const abs = this.anki.resolveAbsolutePath(path);
-        if (abs) {
-          uploads.push({ filePath: abs, ankiFileName: tF.name });
-          const tag = size
-            ? `<img src="${tF.name}" width="${size}">`
-            : `<img src="${tF.name}">`;
-          out = out.replace(md, tag);
-        }
-      }
+      const [md, linkPath, size] = m;
+      const imageFile = this.app.metadataCache.getFirstLinkpathDest(
+        linkPath,
+        file.path
+      );
+      if (!(imageFile instanceof TFile)) continue;
+
+      const buffer    = await this.app.vault.readBinary(imageFile);
+      const dataBase64 = Buffer.from(buffer).toString('base64');
+
+      uploads.push({
+        ankiFileName: imageFile.name,
+        dataBase64,
+      });
+
+      const tag = size
+        ? `<img src="${imageFile.name}" width="${size}">`
+        : `<img src="${imageFile.name}">`;
+      out = out.replace(md, tag);
     }
+
     return { content: out, mediaToUpload: uploads };
   }
 
@@ -205,7 +214,7 @@ private parseNotesFromContent(
       const frontMed = await this.processMedia(note.front, file);
       const backMed = await this.processMedia(note.back, file);
       for (const u of [...frontMed.mediaToUpload, ...backMed.mediaToUpload]) {
-        await this.anki.storeMedia(u.ankiFileName, u.filePath);
+        await this.anki.storeMediaBase64(u.ankiFileName, u.dataBase64);
       }
 
       // LaTeX

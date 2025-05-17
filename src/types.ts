@@ -16,5 +16,8 @@ export interface ObsidianNote {
 
 export interface ProcessedMediaResult {
   content: string;
-  mediaToUpload: { filePath: string; ankiFileName: string }[];
+  mediaToUpload: {
+    ankiFileName: string;
+    dataBase64:   string;
+  }[];
 }
