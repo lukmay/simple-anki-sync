@@ -45,6 +45,7 @@ export default class SimpleAnkiSyncPlugin extends Plugin {
     console.log('Unloading Simple Anki Sync Plugin');
   }
 
+// Splits a table row into its cells
 private splitTableRow(row: string): string[] {
   const clean = row.trim().replace(/^\||\|$/g, '');
   const cells: string[] = [];
@@ -55,17 +56,14 @@ private splitTableRow(row: string): string[] {
   let inBlockMath = false;   // $$…$$
 
   for (let i = 0; i < clean.length; i++) {
-    // Toggle Block-Math
     if (!inInlineMath && clean.slice(i, i+2) === '$$') {
       inBlockMath = !inBlockMath;
       buf += '$$'; i++; continue;
     }
-    // Toggle Inline-Math (nur wenn nicht im Block-Math)
     if (!inBlockMath && clean[i] === '$') {
       inInlineMath = !inInlineMath;
       buf += '$'; continue;
     }
-    // Toggle Obsidian-Embed
     if (!inBrackets && clean.slice(i, i+2) === '[[') {
       inBrackets = true;
       buf += '[['; i++; continue;
@@ -76,11 +74,9 @@ private splitTableRow(row: string): string[] {
     }
 
     const ch = clean[i];
-    // Backslash-escaped Pipe
     if (ch === '\\' && clean[i+1] === '|') {
       buf += '|'; i++; continue;
     }
-    // Nur außerhalb aller Kontexte splitten
     if (ch === '|' && !inBrackets && !inInlineMath && !inBlockMath) {
       cells.push(buf.trim());
       buf = '';
@@ -91,10 +87,10 @@ private splitTableRow(row: string): string[] {
   }
 
   cells.push(buf.trim());
-  // Leere Zellen nur wegwerfen, wenn mehr als eine Zelle da ist
   return cells.filter((c) => c !== '' || cells.length === 1);
 }
 
+// Parses the content of a file and extracts notes and deck name
 private parseNotesFromContent(
   content: string,
   file: TFile
@@ -109,13 +105,11 @@ private parseNotesFromContent(
     const sep = lines[i + 1];
     const d = lines[i + 2];
 
-    // 1. Erkenne grob Header, Separator, Data
     if (
       h.trim().startsWith('|') &&
       sep.match(/^\|\s*-{3,}\s*\|$/) &&
       d.trim().startsWith('|')
     ) {
-      // 2. Prüfe, dass Header und Data **je eine** Zelle haben
       const headerCells = this.splitTableRow(h);
       const dataCells   = this.splitTableRow(d);
       if (headerCells.length !== 1 || dataCells.length !== 1) {
@@ -123,15 +117,12 @@ private parseNotesFromContent(
         continue;
       }
 
-      // 3. Stelle sicher, dass **keine** weitere Tabellen-Zeile folgt
       const nextLine = lines[i + 3];
       if (nextLine?.trim().startsWith('|')) {
-        // eine weitere Zeile -> ganze Tabelle ignorieren
         i++;
         continue;
       }
 
-      // 4. Extrahiere Front/Back und optionalen bestehenden Anki-ID-Kommentar
       let existingId: number | undefined;
       let endLine = i + 2;
       const maybeComment = lines[i + 3];
@@ -150,7 +141,6 @@ private parseNotesFromContent(
         endLine,
       });
 
-      // Überspringe alle Zeilen dieser Tabelle (inkl. Kommentar)
       i = endLine;
     }
   }
