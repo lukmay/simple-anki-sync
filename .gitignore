@@ -54,3 +54,6 @@ pnpm-lock.yaml
 *.log
 *.zip
 *.tar.gz
+
+# Release assets
+main.js
