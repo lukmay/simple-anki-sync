@@ -1,4 +1,4 @@
-import { Plugin, TFile, MarkdownView, Notice } from 'obsidian';
+import { Plugin, TFile, MarkdownView, Notice, arrayBufferToBase64 } from 'obsidian';
 import { AnkiService } from './anki-service';
 import { ObsidianNote, ProcessedMediaResult } from './types';
 
@@ -164,8 +164,8 @@ private parseNotesFromContent(
       );
       if (!(imageFile instanceof TFile)) continue;
 
-      const buffer    = await this.app.vault.readBinary(imageFile);
-      const dataBase64 = Buffer.from(buffer).toString('base64');
+      const buffer = await this.app.vault.readBinary(imageFile);
+      const dataBase64 = arrayBufferToBase64(buffer);
 
       uploads.push({
         ankiFileName: imageFile.name,
