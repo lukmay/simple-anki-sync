@@ -57,3 +57,4 @@ pnpm-lock.yaml
 
 # Release assets
 main.js
+main.js.map
