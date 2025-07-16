@@ -19,11 +19,24 @@ For useage make sure Anki is running & User the following commands:
 `Sync entire vault With Anki`  
 
 
+
+
 ___
 ![image](images/installation.png)
 
+## Automatic installation via the Obsidian App (Recomendet)
 
 
+
+https://github.com/user-attachments/assets/aebca7a1-14c3-4023-b27a-eade3b551b3c
+
+
+
+
+
+
+
+## Manual installation (not recomendet)
 1.  **Open Terminal in Obsidian Plugins Folder:**
     *   Navigate to your Obsidian vault's plugin folder in your terminal or command prompt. This is usually located at:
         `<YourVault>/.obsidian/plugins/`
@@ -120,6 +133,14 @@ Run the **Sync Anki Cards** command, and your cards—with proper deck/subdeck h
 
 ___
 ![image](images/example.png)
+
+# Video Showcase :)
+
+https://github.com/user-attachments/assets/790abb16-b7ea-43d2-995c-720ac1c9b2ed
+
+
+
+
 
 # Quantum Mechanics Cheat Sheet
 
