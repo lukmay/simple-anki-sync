@@ -1,3 +1,8 @@
+
+<video controls>
+  <source src="https://github.com/user-attachments/assets/790abb16-b7ea-43d2-995c-720ac1c9b2ed" type="video/mp4">
+</video>
+
 # Simple Anki Sync - Obsidian Plugin
 > **⚠️ Prerequisite**: Anki must be running with the AnkiConnect extension installed and active.
 > 
