@@ -186,6 +186,11 @@ private parseNotesFromContent(
     return tmp.replace(INLINE_LATEX, '\\($1\\)');
   }
 
+  private convertMarkdownBoldToHtml(text: string): string {
+    // Convert Markdown bold (**text**) to HTML bold (<b>text</b>)
+    return text.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+  }
+
   async syncFile(file: TFile, silent = false): Promise<number[]> {
     // Check AnkiConnect availability before syncing
     if (!(await this.anki.verifyConnection())) {
@@ -220,6 +225,10 @@ private parseNotesFromContent(
       // LaTeX
       let frontHtml = this.convertLatexDelimiters(frontMed.content);
       let backHtml = this.convertLatexDelimiters(backMed.content);
+
+      // Convert Markdown bold to HTML bold
+      frontHtml = this.convertMarkdownBoldToHtml(frontHtml);
+      backHtml = this.convertMarkdownBoldToHtml(backHtml);
 
       // Obsidian-Link
       const vault = this.app.vault.getName();
