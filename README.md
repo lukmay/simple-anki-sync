@@ -87,7 +87,8 @@ ___
 
 Commands:    
 `Sync current file With Anki`   
-`Sync entire vault With Anki`
+`Sync entire vault With Anki`    
+`Unsync current file with Anki`
 
 Sync any minimal Markdown table from Obsidian into Anki as Basic cards. Just tag your note with the deck name and subdeck:
 
@@ -113,6 +114,13 @@ In Anki:
 
 
 Run the **Sync Anki Cards** command, and your cards—with proper deck/subdeck handling—appear in Anki instantly.
+
+---
+
+## Unsync Feature
+
+You can cleanly **unsync the currently active file from Anki** using the `Unsync current file with Anki` command.    
+This removes all Anki note references from the file and deletes the corresponding notes in Anki via AnkiConnect, without affecting any other files in the vault. This makes it easy to intentionally remove a note (or an entire file) from Anki while keeping your Obsidian content intact.
 
 ---
 
