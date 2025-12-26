@@ -39,6 +39,19 @@ export default class SimpleAnkiSyncPlugin extends Plugin {
         await this.syncVault();
       },
     });
+
+    this.addCommand({
+      id: 'unsync-current-file-with-anki',
+      name: 'Unsync current file with Anki',
+      checkCallback: (checking) => {
+        const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+        if (view?.file) {
+          if (!checking) this.unSyncFile(view.file);
+          return true;
+        }
+        return false;
+      },
+    });
   }
 
   onunload() {
@@ -297,4 +310,37 @@ private parseNotesFromContent(
     }
     new Notice('Vault sync complete.');
   }
+
+  async unSyncFile(file: TFile, silent = false): Promise<void> {
+  // Check AnkiConnect availability before syncing
+  if (!(await this.anki.verifyConnection())) {
+    new Notice('AnkiConnect is not available. Please make sure Anki is running and AnkiConnect is installed.');
+    return;
+  }
+
+  if (!silent) new Notice(`Unsyncing ${file.basename}…`);
+  const orig = await this.app.vault.read(file);
+  const existingIds: number[] = [];
+  for (const m of orig.matchAll(NOTE_ID_COMMENT_GLOBAL)) existingIds.push(+m[1]);
+  const lines = orig.split('\n');
+
+  // Remove all IDs and Anki-Cards
+  if (existingIds.length) {
+    await this.anki.deleteNotes(existingIds);
+    for (const id of existingIds) {
+      const commentLine = `<!--ANKI_NOTE_ID:${id}-->`;
+      const idx = lines.findIndex(l => l.trim() === commentLine);
+      if (idx !== -1) {
+        lines.splice(idx, 1);
+      }
+    }
+  }
+
+  const updated = lines.join('\n');
+  if (updated !== orig) {
+    await this.app.vault.modify(file, updated);
+  }
+  if (!silent) new Notice(`${file.basename} successfully unsynced`);
+  return;
+}
 }
