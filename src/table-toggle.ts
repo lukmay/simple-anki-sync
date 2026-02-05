@@ -14,7 +14,16 @@ const EDITABLE_CELL_SELECTOR = 'td, th';
 const TOGGLE_LABEL = 'Toggle answer row';
 
 const STYLES = `
-.markdown-rendered table.${CLASS_TABLE} .${CLASS_TRIGGER},
+.markdown-rendered table.${CLASS_TABLE} .${CLASS_TRIGGER} {
+  position: relative;
+  padding-left: 1.2em !important;
+}
+
+/* Reading view can override table cell padding; enforce spacing there only. */
+.markdown-reading-view .markdown-rendered table.${CLASS_TABLE} .${CLASS_TRIGGER} {
+  padding-left: 1.2em !important;
+}
+
 .markdown-source-view.mod-cm6 .cm-table-widget table.${CLASS_TABLE} .${CLASS_TRIGGER} {
   position: relative;
   padding-left: 1.2em;
@@ -38,7 +47,11 @@ const STYLES = `
 
 .markdown-rendered table.${CLASS_TABLE} .${CLASS_TEXT} {
   display: block;
-  padding-left: 0;
+  padding-left: 0 !important;
+}
+
+.markdown-reading-view .markdown-rendered table.${CLASS_TABLE} .${CLASS_TEXT} {
+  padding-left: 0 !important;
 }
 
 .markdown-rendered table.${CLASS_TABLE} .${CLASS_BUTTON}::before {
@@ -217,10 +230,15 @@ export class TableToggleManager {
     table.classList.add(CLASS_TABLE);
 
     headerCell.classList.add(CLASS_TRIGGER);
+    headerCell.style.setProperty('padding-left', '1.2em', 'important');
 
     const textWrapper = this.wrapHeaderText(headerCell);
+    textWrapper.style.setProperty('padding-left', '0', 'important');
+    textWrapper.style.setProperty('margin-left', '0', 'important');
+    textWrapper.style.setProperty('display', 'block', 'important');
     const toggleButton = this.createToggleButton();
     headerCell.insertBefore(toggleButton, textWrapper);
+    this.ensureToggleSpacing(headerCell, textWrapper, toggleButton);
 
     const toggle = () => {
       this.setTableCollapsed(table, !table.classList.contains(CLASS_COLLAPSED));
@@ -236,6 +254,7 @@ export class TableToggleManager {
     this.bindEditingState(table, headerCell);
     this.setTableCollapsed(table, this.settings.defaultCollapsed);
   }
+
 
   private wrapHeaderText(cell: HTMLTableCellElement): HTMLSpanElement {
     const existing = cell.querySelector(`:scope > .${CLASS_TEXT}`);
@@ -271,6 +290,36 @@ export class TableToggleManager {
     button.setAttribute('aria-label', TOGGLE_LABEL);
     button.setAttribute('aria-expanded', 'false');
     return button;
+  }
+
+  private ensureToggleSpacing(
+    headerCell: HTMLTableCellElement,
+    textWrapper: HTMLSpanElement,
+    toggleButton: HTMLButtonElement
+  ): void {
+    const applySpacing = () => {
+      if (!headerCell.isConnected) return;
+
+      const buttonRect = toggleButton.getBoundingClientRect();
+      const textRect = textWrapper.getBoundingClientRect();
+      if (buttonRect.width === 0 || textRect.width === 0) return;
+
+      const fontSize = Number.parseFloat(getComputedStyle(headerCell).fontSize || '16');
+      const desiredGapPx = fontSize * 0.25;
+      const desiredLeft = buttonRect.right + desiredGapPx;
+      const currentLeft = textRect.left;
+
+      if (currentLeft >= desiredLeft - 0.5) {
+        return;
+      }
+
+      const currentMargin = Number.parseFloat(getComputedStyle(textWrapper).marginLeft || '0');
+      const delta = desiredLeft - currentLeft;
+      const nextMargin = currentMargin + delta;
+      textWrapper.style.setProperty('margin-left', `${nextMargin}px`, 'important');
+    };
+
+    requestAnimationFrame(applySpacing);
   }
 
   private bindEditingState(table: HTMLTableElement, headerCell: HTMLTableCellElement): void {
