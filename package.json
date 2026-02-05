@@ -1,6 +1,6 @@
 {
   "name": "simple-anki-sync",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Personal Anki Sync Plugin for Obsidian.",
   "main": "main.js",
   "scripts": {

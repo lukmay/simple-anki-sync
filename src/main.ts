@@ -188,6 +188,115 @@ export default class SimpleAnkiSyncPlugin extends Plugin {
     return cells.filter((c) => c !== '' || cells.length === 1);
   }
 
+  private extractInlineNoteId(back: string): { noteId?: number; cleanedBack: string } {
+    const match = back.match(NOTE_ID_COMMENT);
+    if (!match) {
+      return { cleanedBack: back };
+    }
+
+    const noteId = parseInt(match[1], 10);
+    const trailingPattern = new RegExp(
+      `(?:<br\\s*\\/?>\\s*)*${NOTE_ID_COMMENT.source}\\s*$`,
+      'i'
+    );
+    let cleanedBack = back;
+
+    if (trailingPattern.test(cleanedBack)) {
+      cleanedBack = cleanedBack.replace(trailingPattern, '');
+      cleanedBack = cleanedBack.replace(/\s+$/, '');
+    } else {
+      const inlinePattern = new RegExp(NOTE_ID_COMMENT.source, 'g');
+      cleanedBack = cleanedBack.replace(inlinePattern, '');
+    }
+
+    return { noteId, cleanedBack };
+  }
+
+  private appendNoteIdToRow(row: string, noteId: number): string {
+    if (NOTE_ID_COMMENT.test(row)) {
+      return row;
+    }
+
+    const match = row.match(/^(\s*\|)(.*)(\|\s*)$/);
+    if (!match) {
+      return row;
+    }
+
+    const [, left, cell, right] = match;
+    const trimmedCell = cell.replace(/\s+$/, '');
+    const spacer = trimmedCell.length ? '<br><br>' : '';
+    const updatedCell = `${trimmedCell}${spacer}<!--ANKI_NOTE_ID:${noteId}-->`;
+    return `${left}${updatedCell}${right}`;
+  }
+
+  private stripNoteIdFromCell(
+    cell: string,
+    noteId?: number
+  ): { updatedCell: string; removed: boolean } {
+    if (!cell.includes('ANKI_NOTE_ID')) {
+      return { updatedCell: cell, removed: false };
+    }
+    if (noteId && !cell.includes(`<!--ANKI_NOTE_ID:${noteId}-->`)) {
+      return { updatedCell: cell, removed: false };
+    }
+
+    const idPattern = noteId
+      ? `<!--ANKI_NOTE_ID:${noteId}-->`
+      : NOTE_ID_COMMENT.source;
+    const trailingPattern = new RegExp(
+      `(?:<br\\s*\\/?>\\s*)*${idPattern}\\s*$`,
+      'i'
+    );
+    let updatedCell = cell;
+
+    if (trailingPattern.test(updatedCell)) {
+      const trimmed = updatedCell.replace(trailingPattern, '').replace(/\s+$/, '');
+      return { updatedCell: trimmed, removed: trimmed !== cell };
+    }
+
+    const inlinePattern = noteId
+      ? new RegExp(`<!--ANKI_NOTE_ID:${noteId}-->`, 'g')
+      : new RegExp(NOTE_ID_COMMENT.source, 'g');
+    updatedCell = updatedCell.replace(inlinePattern, '');
+    return { updatedCell, removed: updatedCell !== cell };
+  }
+
+  private stripNoteIdFromLine(
+    line: string,
+    noteId?: number
+  ): { updatedLine: string; removed: boolean; removeLine: boolean } {
+    if (!line.includes('ANKI_NOTE_ID')) {
+      return { updatedLine: line, removed: false, removeLine: false };
+    }
+
+    const trimmed = line.trim();
+    const linePattern = noteId
+      ? new RegExp(`^<!--ANKI_NOTE_ID:${noteId}-->$`)
+      : new RegExp(`^${NOTE_ID_COMMENT.source}$`);
+    if (linePattern.test(trimmed)) {
+      return { updatedLine: '', removed: true, removeLine: true };
+    }
+
+    const rowMatch = line.match(/^(\s*\|)(.*)(\|\s*)$/);
+    if (rowMatch) {
+      const [, left, cell, right] = rowMatch;
+      const { updatedCell, removed } = this.stripNoteIdFromCell(cell, noteId);
+      if (removed) {
+        return {
+          updatedLine: `${left}${updatedCell}${right}`,
+          removed: true,
+          removeLine: false,
+        };
+      }
+    }
+
+    const inlinePattern = noteId
+      ? new RegExp(`<!--ANKI_NOTE_ID:${noteId}-->`, 'g')
+      : new RegExp(NOTE_ID_COMMENT.source, 'g');
+    const updatedLine = line.replace(inlinePattern, '');
+    return { updatedLine, removed: updatedLine !== line, removeLine: false };
+  }
+
   // Parses the content of a file and extracts notes and deck name
   private parseNotesFromContent(
     content: string,
@@ -223,11 +332,18 @@ export default class SimpleAnkiSyncPlugin extends Plugin {
 
         let existingId: number | undefined;
         let endLine = i + 2;
-        const maybeComment = lines[i + 3];
-        const idMatch = maybeComment?.match(NOTE_ID_COMMENT);
-        if (idMatch) {
-          existingId = parseInt(idMatch[1], 10);
-          endLine = i + 3;
+
+        const inlineId = this.extractInlineNoteId(dataCells[0]);
+        dataCells[0] = inlineId.cleanedBack;
+        if (inlineId.noteId) {
+          existingId = inlineId.noteId;
+        } else {
+          const maybeComment = lines[i + 3];
+          const idMatch = maybeComment?.match(NOTE_ID_COMMENT);
+          if (idMatch) {
+            existingId = parseInt(idMatch[1], 10);
+            endLine = i + 3;
+          }
         }
 
         notes.push({
@@ -309,7 +425,6 @@ export default class SimpleAnkiSyncPlugin extends Plugin {
     for (const m of orig.matchAll(NOTE_ID_COMMENT_GLOBAL)) existingIds.push(+m[1]);
 
     const lines = orig.split('\n');
-    let offset = 0;
     const newIds: number[] = [];
 
     for (const note of notes) {
@@ -348,8 +463,9 @@ export default class SimpleAnkiSyncPlugin extends Plugin {
         const created = await this.anki.addNote(deckName, DEFAULT_MODEL, fields);
         if (created) {
           newIds.push(created);
-          lines.splice(note.endLine + 1 + offset, 0, `<!--ANKI_NOTE_ID:${created}-->`);
-          offset++;
+          const dataRowIndex = note.startLine + 2;
+          const updatedRow = this.appendNoteIdToRow(lines[dataRowIndex], created);
+          lines[dataRowIndex] = updatedRow;
         }
       }
     }
@@ -359,11 +475,14 @@ export default class SimpleAnkiSyncPlugin extends Plugin {
     if (toDelete.length) {
       await this.anki.deleteNotes(toDelete);
       for (const id of toDelete) {
-        const commentLine = `<!--ANKI_NOTE_ID:${id}-->`;
-        const idx = lines.findIndex(l => l.trim() === commentLine);
-        if (idx !== -1) {
-          lines.splice(idx, 1);
-          if (idx < notes.length) offset--;
+        for (let idx = lines.length - 1; idx >= 0; idx--) {
+          const result = this.stripNoteIdFromLine(lines[idx], id);
+          if (!result.removed) continue;
+          if (result.removeLine) {
+            lines.splice(idx, 1);
+          } else {
+            lines[idx] = result.updatedLine;
+          }
         }
       }
     }
@@ -412,13 +531,16 @@ export default class SimpleAnkiSyncPlugin extends Plugin {
     // Remove all IDs and Anki-Cards
     if (existingIds.length) {
       await this.anki.deleteNotes(existingIds);
-      for (const id of existingIds) {
-        const commentLine = `<!--ANKI_NOTE_ID:${id}-->`;
-        const idx = lines.findIndex(l => l.trim() === commentLine);
-        if (idx !== -1) {
-          lines.splice(idx, 1);
+      const cleaned: string[] = [];
+      for (const line of lines) {
+        const result = this.stripNoteIdFromLine(line);
+        if (result.removeLine) {
+          continue;
         }
+        cleaned.push(result.updatedLine);
       }
+      lines.length = 0;
+      lines.push(...cleaned);
     }
 
     const updated = lines.join('\n');
