@@ -1,6 +1,8 @@
-import { Plugin, TFile, MarkdownView, Notice, arrayBufferToBase64 } from 'obsidian';
+﻿import { Plugin, TFile, MarkdownView, Notice, arrayBufferToBase64 } from 'obsidian';
 import { AnkiService } from './anki-service';
 import { ObsidianNote, ProcessedMediaResult } from './types';
+import { DEFAULT_SETTINGS, SimpleAnkiSyncSettingTab, SimpleAnkiSyncSettings } from './settings';
+import { TableToggleManager } from './table-toggle';
 
 // Regex-Templates
 const DECK_TAG = /#anki\/([^\s]+)/;
@@ -14,10 +16,20 @@ const DEFAULT_MODEL = 'Basic';
 
 export default class SimpleAnkiSyncPlugin extends Plugin {
   private anki!: AnkiService;
+  public settings: SimpleAnkiSyncSettings = DEFAULT_SETTINGS;
+  private tableToggle!: TableToggleManager;
 
   async onload() {
     console.log('Loading Simple Anki Sync Plugin');
     this.anki = new AnkiService(this.app);
+
+    await this.loadSettings();
+
+    this.tableToggle = new TableToggleManager(this.settings);
+    this.tableToggle.registerMarkdownPostProcessor(this);
+    this.tableToggle.onLoad();
+
+    this.addSettingTab(new SimpleAnkiSyncSettingTab(this.app, this));
 
     this.addCommand({
       id: 'sync-current-file-with-anki',
@@ -52,114 +64,167 @@ export default class SimpleAnkiSyncPlugin extends Plugin {
         return false;
       },
     });
+
+    this.addCommand({
+      id: 'collapse-anki-card-tables',
+      name: 'Collapse all Anki card tables on page',
+      checkCallback: (checking) => {
+        const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+        if (!view) return false;
+        if (checking) return true;
+        if (!this.settings.enableAnswerToggle) {
+          new Notice('Answer table toggles are disabled in settings.');
+          return;
+        }
+        this.tableToggle.setTablesCollapsedInScope(view.contentEl, true);
+      },
+    });
+
+    this.addCommand({
+      id: 'expand-anki-card-tables',
+      name: 'Expand all Anki card tables on page',
+      checkCallback: (checking) => {
+        const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+        if (!view) return false;
+        if (checking) return true;
+        if (!this.settings.enableAnswerToggle) {
+          new Notice('Answer table toggles are disabled in settings.');
+          return;
+        }
+        this.tableToggle.setTablesCollapsedInScope(view.contentEl, false);
+      },
+    });
   }
 
   onunload() {
     console.log('Unloading Simple Anki Sync Plugin');
+    this.tableToggle?.onUnload();
   }
 
-// Splits a table row into its cells
-private splitTableRow(row: string): string[] {
-  const clean = row.trim().replace(/^\||\|$/g, '');
-  const cells: string[] = [];
-  let buf = '';
-
-  let inBrackets = false;    // [[…]]
-  let inInlineMath = false;  // $…$
-  let inBlockMath = false;   // $$…$$
-
-  for (let i = 0; i < clean.length; i++) {
-    if (!inInlineMath && clean.slice(i, i+2) === '$$') {
-      inBlockMath = !inBlockMath;
-      buf += '$$'; i++; continue;
-    }
-    if (!inBlockMath && clean[i] === '$') {
-      inInlineMath = !inInlineMath;
-      buf += '$'; continue;
-    }
-    if (!inBrackets && clean.slice(i, i+2) === '[[') {
-      inBrackets = true;
-      buf += '[['; i++; continue;
-    }
-    if (inBrackets && clean.slice(i, i+2) === ']]') {
-      inBrackets = false;
-      buf += ']]'; i++; continue;
-    }
-
-    const ch = clean[i];
-    if (ch === '\\' && clean[i+1] === '|') {
-      buf += '|'; i++; continue;
-    }
-    if (ch === '|' && !inBrackets && !inInlineMath && !inBlockMath) {
-      cells.push(buf.trim());
-      buf = '';
-      continue;
-    }
-
-    buf += ch;
+  private async loadSettings(): Promise<void> {
+    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
   }
 
-  cells.push(buf.trim());
-  return cells.filter((c) => c !== '' || cells.length === 1);
-}
+  public async saveSettings(): Promise<void> {
+    await this.saveData(this.settings);
+  }
 
-// Parses the content of a file and extracts notes and deck name
-private parseNotesFromContent(
-  content: string,
-  file: TFile
-): { notes: ObsidianNote[]; deckName: string | null } {
-  const tagMatch = content.match(DECK_TAG);
-  const deckName = tagMatch?.[1]?.replace(/\//g, '::') ?? null;
-  const notes: ObsidianNote[] = [];
-  const lines = content.split('\n');
+  public applyRowToggleSettings(): void {
+    this.tableToggle?.updateSettings(this.settings);
+    this.tableToggle?.applySettings();
+  }
 
-  for (let i = 0; i < lines.length - 2; i++) {
-    const h = lines[i];
-    const sep = lines[i + 1];
-    const d = lines[i + 2];
+  // Splits a table row into its cells
+  private splitTableRow(row: string): string[] {
+    const clean = row.trim().replace(/^\||\|$/g, '');
+    const cells: string[] = [];
+    let buf = '';
 
-    if (
-      h.trim().startsWith('|') &&
-      sep.match(/^\|\s*-{3,}\s*\|$/) &&
-      d.trim().startsWith('|')
-    ) {
-      const headerCells = this.splitTableRow(h);
-      const dataCells   = this.splitTableRow(d);
-      if (headerCells.length !== 1 || dataCells.length !== 1) {
+    let inBrackets = false;    // [[...]]
+    let inInlineMath = false;  // $...$
+    let inBlockMath = false;   // $$...$$
+
+    for (let i = 0; i < clean.length; i++) {
+      if (!inInlineMath && clean.slice(i, i + 2) === '$$') {
+        inBlockMath = !inBlockMath;
+        buf += '$$';
+        i++;
+        continue;
+      }
+      if (!inBlockMath && clean[i] === '$') {
+        inInlineMath = !inInlineMath;
+        buf += '$';
+        continue;
+      }
+      if (!inBrackets && clean.slice(i, i + 2) === '[[') {
+        inBrackets = true;
+        buf += '[[';
+        i++;
+        continue;
+      }
+      if (inBrackets && clean.slice(i, i + 2) === ']]') {
+        inBrackets = false;
+        buf += ']]';
         i++;
         continue;
       }
 
-      const nextLine = lines[i + 3];
-      if (nextLine?.trim().startsWith('|')) {
+      const ch = clean[i];
+      if (ch === '\\' && clean[i + 1] === '|') {
+        buf += '|';
         i++;
         continue;
       }
-
-      let existingId: number | undefined;
-      let endLine = i + 2;
-      const maybeComment = lines[i + 3];
-      const idMatch = maybeComment?.match(NOTE_ID_COMMENT);
-      if (idMatch) {
-        existingId = parseInt(idMatch[1], 10);
-        endLine = i + 3;
+      if (ch === '|' && !inBrackets && !inInlineMath && !inBlockMath) {
+        cells.push(buf.trim());
+        buf = '';
+        continue;
       }
 
-      notes.push({
-        sourceId: `${file.path}-${i}`,
-        front: headerCells[0],
-        back: dataCells[0],
-        noteId: existingId,
-        startLine: i,
-        endLine,
-      });
-
-      i = endLine;
+      buf += ch;
     }
+
+    cells.push(buf.trim());
+    return cells.filter((c) => c !== '' || cells.length === 1);
   }
 
-  return { notes, deckName };
-}
+  // Parses the content of a file and extracts notes and deck name
+  private parseNotesFromContent(
+    content: string,
+    file: TFile
+  ): { notes: ObsidianNote[]; deckName: string | null } {
+    const tagMatch = content.match(DECK_TAG);
+    const deckName = tagMatch?.[1]?.replace(/\//g, '::') ?? null;
+    const notes: ObsidianNote[] = [];
+    const lines = content.split('\n');
+
+    for (let i = 0; i < lines.length - 2; i++) {
+      const h = lines[i];
+      const sep = lines[i + 1];
+      const d = lines[i + 2];
+
+      if (
+        h.trim().startsWith('|') &&
+        sep.match(/^\|\s*-{3,}\s*\|$/) &&
+        d.trim().startsWith('|')
+      ) {
+        const headerCells = this.splitTableRow(h);
+        const dataCells = this.splitTableRow(d);
+        if (headerCells.length !== 1 || dataCells.length !== 1) {
+          i++;
+          continue;
+        }
+
+        const nextLine = lines[i + 3];
+        if (nextLine?.trim().startsWith('|')) {
+          i++;
+          continue;
+        }
+
+        let existingId: number | undefined;
+        let endLine = i + 2;
+        const maybeComment = lines[i + 3];
+        const idMatch = maybeComment?.match(NOTE_ID_COMMENT);
+        if (idMatch) {
+          existingId = parseInt(idMatch[1], 10);
+          endLine = i + 3;
+        }
+
+        notes.push({
+          sourceId: `${file.path}-${i}`,
+          front: headerCells[0],
+          back: dataCells[0],
+          noteId: existingId,
+          startLine: i,
+          endLine,
+        });
+
+        i = endLine;
+      }
+    }
+
+    return { notes, deckName };
+  }
 
   private async processMedia(
     text: string,
@@ -211,7 +276,7 @@ private parseNotesFromContent(
       return [];
     }
 
-    if (!silent) new Notice(`Syncing ${file.basename}…`);
+    if (!silent) new Notice(`Syncing ${file.basename}...`);
     const orig = await this.app.vault.read(file);
     const { notes, deckName } = this.parseNotesFromContent(orig, file);
     if (!deckName) {
@@ -298,7 +363,7 @@ private parseNotesFromContent(
       return;
     }
 
-    new Notice('Starting vault sync. This may take a while…');
+    new Notice('Starting vault sync. This may take a while...');
     const files = this.app.vault.getMarkdownFiles();
     for (const f of files) {
       try {
@@ -312,35 +377,35 @@ private parseNotesFromContent(
   }
 
   async unSyncFile(file: TFile, silent = false): Promise<void> {
-  // Check AnkiConnect availability before syncing
-  if (!(await this.anki.verifyConnection())) {
-    new Notice('AnkiConnect is not available. Please make sure Anki is running and AnkiConnect is installed.');
-    return;
-  }
+    // Check AnkiConnect availability before syncing
+    if (!(await this.anki.verifyConnection())) {
+      new Notice('AnkiConnect is not available. Please make sure Anki is running and AnkiConnect is installed.');
+      return;
+    }
 
-  if (!silent) new Notice(`Unsyncing ${file.basename}…`);
-  const orig = await this.app.vault.read(file);
-  const existingIds: number[] = [];
-  for (const m of orig.matchAll(NOTE_ID_COMMENT_GLOBAL)) existingIds.push(+m[1]);
-  const lines = orig.split('\n');
+    if (!silent) new Notice(`Unsyncing ${file.basename}...`);
+    const orig = await this.app.vault.read(file);
+    const existingIds: number[] = [];
+    for (const m of orig.matchAll(NOTE_ID_COMMENT_GLOBAL)) existingIds.push(+m[1]);
+    const lines = orig.split('\n');
 
-  // Remove all IDs and Anki-Cards
-  if (existingIds.length) {
-    await this.anki.deleteNotes(existingIds);
-    for (const id of existingIds) {
-      const commentLine = `<!--ANKI_NOTE_ID:${id}-->`;
-      const idx = lines.findIndex(l => l.trim() === commentLine);
-      if (idx !== -1) {
-        lines.splice(idx, 1);
+    // Remove all IDs and Anki-Cards
+    if (existingIds.length) {
+      await this.anki.deleteNotes(existingIds);
+      for (const id of existingIds) {
+        const commentLine = `<!--ANKI_NOTE_ID:${id}-->`;
+        const idx = lines.findIndex(l => l.trim() === commentLine);
+        if (idx !== -1) {
+          lines.splice(idx, 1);
+        }
       }
     }
-  }
 
-  const updated = lines.join('\n');
-  if (updated !== orig) {
-    await this.app.vault.modify(file, updated);
+    const updated = lines.join('\n');
+    if (updated !== orig) {
+      await this.app.vault.modify(file, updated);
+    }
+    if (!silent) new Notice(`${file.basename} successfully unsynced`);
+    return;
   }
-  if (!silent) new Notice(`${file.basename} successfully unsynced`);
-  return;
-}
 }
