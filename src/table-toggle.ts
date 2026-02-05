@@ -50,6 +50,14 @@ const STYLES = `
   padding-left: 0 !important;
 }
 
+.markdown-rendered table.${CLASS_TABLE} .${CLASS_TEXT}:empty::before {
+  content: "\\00a0";
+}
+
+.markdown-rendered table.${CLASS_TABLE} td:empty::before {
+  content: "\\00a0";
+}
+
 .markdown-reading-view .markdown-rendered table.${CLASS_TABLE} .${CLASS_TEXT} {
   padding-left: 0 !important;
 }
@@ -297,6 +305,11 @@ export class TableToggleManager {
     textWrapper: HTMLSpanElement,
     toggleButton: HTMLButtonElement
   ): void {
+    // Only needed in reading view; preview is already correct.
+    if (!headerCell.closest('.markdown-reading-view')) {
+      return;
+    }
+
     const applySpacing = () => {
       if (!headerCell.isConnected) return;
 
