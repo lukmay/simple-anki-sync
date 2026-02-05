@@ -13,6 +13,7 @@ const BLOCK_LATEX = /\$\$([\s\S]*?)\$\$/g;
 const INLINE_LATEX = /(?<![\$\\])\$([^$]+?)(?<!\\)\$/g;
 
 const DEFAULT_MODEL = 'Basic';
+const EMPTY_ANKI_BLOCK = `|     |\n| --- |\n|     |`;
 
 export default class SimpleAnkiSyncPlugin extends Plugin {
   private anki!: AnkiService;
@@ -92,6 +93,25 @@ export default class SimpleAnkiSyncPlugin extends Plugin {
           return;
         }
         this.tableToggle.setTablesCollapsedInScope(view.contentEl, false);
+      },
+    });
+
+    this.addCommand({
+      id: 'insert-empty-anki-card',
+      name: 'Insert empty Anki card block',
+      checkCallback: (checking) => {
+        const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+        if (!view || !view.editor) return false;
+        if (checking) return true;
+
+        const editor = view.editor;
+        editor.replaceRange(EMPTY_ANKI_BLOCK, editor.getCursor());
+        if (this.settings.enableAnswerToggle) {
+          window.setTimeout(() => {
+            this.tableToggle?.setTablesCollapsedInScope(view.contentEl, false);
+          }, 0);
+        }
+        return;
       },
     });
   }
