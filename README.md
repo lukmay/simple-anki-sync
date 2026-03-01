@@ -130,6 +130,8 @@ This removes all Anki note references from the file and deletes the correspondin
     Rename your `#anki/…` tag and on next sync all existing cards move into the new deck automatically.
 - **Image support & resizing**  
     Embed images on either side using `![[image.png]]` and control their display size inline eg. `![[image.png|300]]`.
+- **Excalidraw support**  
+    Embed `.excalidraw` drawings seamlessly. They are automatically converted to images on sync.
 - **Math auto-formatting**  
     Dollar-delimited LaTeX in Obsidian becomes nicely rendered in Anki.
 - **Automatic deletion**  

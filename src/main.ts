@@ -378,17 +378,44 @@ export default class SimpleAnkiSyncPlugin extends Plugin {
       );
       if (!(imageFile instanceof TFile)) continue;
 
-      const buffer = await this.app.vault.readBinary(imageFile);
-      const dataBase64 = arrayBufferToBase64(buffer);
+      let dataBase64 = '';
+      let MathRandom = Math.floor(Math.random() * 10000000);
+      let ankiFileName = imageFile.name;
+
+      const windowAsAny = window as any;
+      const isExcalidraw = windowAsAny.ExcalidrawAutomate && windowAsAny.ExcalidrawAutomate.isExcalidrawFile(imageFile);
+
+      if (isExcalidraw) {
+        try {
+          const ea = windowAsAny.ExcalidrawAutomate;
+          // Scale 1.5 usually provides a good balance between quality and file size
+          const blob = await ea.createPNG(imageFile.path, 1.5);
+          const arrayBuffer = await blob.arrayBuffer();
+
+          dataBase64 = arrayBufferToBase64(arrayBuffer);
+          ankiFileName = `${imageFile.basename}_${MathRandom}.png`;
+        } catch (e) {
+          console.error('Simple Anki Sync: Failed to generate PNG from Excalidraw file', e);
+          // Fallback to reading the binary directly (which will be broken in Anki, but prevents a total crash)
+          const buffer = await this.app.vault.readBinary(imageFile);
+          dataBase64 = arrayBufferToBase64(buffer);
+        }
+      } else {
+        const buffer = await this.app.vault.readBinary(imageFile);
+        dataBase64 = arrayBufferToBase64(buffer);
+      }
 
       uploads.push({
-        ankiFileName: imageFile.name,
+        ankiFileName,
         dataBase64,
       });
 
+      // Anki requires URL encoding for filenames with spaces in the img src tag
+      const encodedFileName = encodeURIComponent(ankiFileName);
+
       const tag = size
-        ? `<img src="${imageFile.name}" width="${size}">`
-        : `<img src="${imageFile.name}">`;
+        ? `<img src="${encodedFileName}" width="${size}">`
+        : `<img src="${encodedFileName}">`;
       out = out.replace(md, tag);
     }
 

@@ -26,6 +26,7 @@
     "@rollup/plugin-typescript": "^12.1.2",
     "@types/node": "^18.11.18",
     "obsidian": "^1.1.16",
+    "obsidian-excalidraw-plugin": "^1.9.14",
     "rollup": "^4.40.2",
     "tslib": "^2.8.1",
     "typescript": "^5.8.3"
