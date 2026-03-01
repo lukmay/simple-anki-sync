@@ -531,6 +531,11 @@ export default class SimpleAnkiSyncPlugin extends Plugin {
           const dataRowIndex = note.startLine + 2;
           const updatedRow = this.appendNoteIdToRow(lines[dataRowIndex], created);
           lines[dataRowIndex] = updatedRow;
+
+          // Replace the fallback URL with the precise custom protocol URL now that we have an ID
+          const newUrl = `obsidian://simple-anki-sync?vault=${encodeURIComponent(vault)}&file=${encodeURIComponent(file.path)}&noteId=${created}`;
+          const updatedBackHtml = backHtml.replace(url, newUrl);
+          await this.anki.updateNote(created, { Front: frontHtml, Back: updatedBackHtml });
         }
       }
     }
