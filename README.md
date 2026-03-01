@@ -134,10 +134,10 @@ This removes all Anki note references from the file and deletes the correspondin
     Embed `.excalidraw` drawings seamlessly. They are automatically converted to images on sync.
 - **Math auto-formatting**  
     Dollar-delimited LaTeX in Obsidian becomes nicely rendered in Anki.
-- **Automatic deletion**  
+- [x] Automatic deletion
     Delete a card in Obsidian and the corresponding Anki card is removed on sync. **IMPORTANT: don't delete the Anki-ID below manually**
-- **Backlinks**  
-    Each card carries a URL back to its source note for easy context retrieval.
+- **Precise Backlinks**  
+    Each card carries a URL back to its source note. Clicking it from Anki will open Obsidian and scroll you down directly to the flashcard's exact row!
 - **Anki-Tags**  
     Each card in Anki has a assigned tag `obsidian_simple_anki_sync_created` to easely filter for this automatically created cards.
 

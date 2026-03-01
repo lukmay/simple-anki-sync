@@ -1,4 +1,4 @@
-﻿import { Plugin, TFile, MarkdownView, Notice, arrayBufferToBase64 } from 'obsidian';
+﻿import { Plugin, TFile, MarkdownView, Notice, arrayBufferToBase64, ObsidianProtocolData } from 'obsidian';
 import { AnkiService } from './anki-service';
 import { ObsidianNote, ProcessedMediaResult } from './types';
 import { DEFAULT_SETTINGS, SimpleAnkiSyncSettingTab, SimpleAnkiSyncSettings } from './settings';
@@ -114,6 +114,40 @@ export default class SimpleAnkiSyncPlugin extends Plugin {
         return;
       },
     });
+
+    this.registerObsidianProtocolHandler('simple-anki-sync', this.handleCustomProtocol.bind(this));
+  }
+
+  private async handleCustomProtocol(params: ObsidianProtocolData) {
+    if (params.action === 'simple-anki-sync') {
+      const { file, noteId } = params;
+      if (!file || !noteId) return;
+
+      const abstractFile = this.app.vault.getAbstractFileByPath(file);
+      if (!(abstractFile instanceof TFile)) return;
+
+      const leaf = this.app.workspace.getLeaf(false);
+      await leaf.openFile(abstractFile);
+
+      const content = await this.app.vault.read(abstractFile);
+      const lines = content.split('\n');
+
+      const searchFor = `<!--ANKI_NOTE_ID:${noteId}-->`;
+      const lineNumber = lines.findIndex(line => line.includes(searchFor));
+
+      if (lineNumber !== -1) {
+        // Find where the trailing Anki comment or `<br>` tags start, so we can place the cursor exactly there
+        const line = lines[lineNumber];
+        const match = line.match(/(?:<br\s*\/?>\s*)*<!--ANKI_NOTE_ID:\d+-->/i);
+        const column = match ? match.index || 0 : 0;
+
+        const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+        if (view && view.editor) { // only if in edit mode
+          view.editor.setCursor(lineNumber, column);
+          view.editor.scrollIntoView({ from: { line: lineNumber, ch: 0 }, to: { line: lineNumber, ch: 0 } }, true);
+        }
+      }
+    }
   }
 
   onunload() {
@@ -472,9 +506,13 @@ export default class SimpleAnkiSyncPlugin extends Plugin {
 
       // Obsidian-Link
       const vault = this.app.vault.getName();
-      const url = `obsidian://open?vault=${encodeURIComponent(vault)}&file=${encodeURIComponent(
-        file.path
-      )}`;
+      let url = '';
+      if (note.noteId) {
+        url = `obsidian://simple-anki-sync?vault=${encodeURIComponent(vault)}&file=${encodeURIComponent(file.path)}&noteId=${note.noteId}`;
+      } else {
+        url = `obsidian://open?vault=${encodeURIComponent(vault)}&file=${encodeURIComponent(file.path)}`;
+      }
+
       backHtml += `<br><small><a href="${url}" style="text-decoration:none;color:grey;font-size:0.8em;">Obsidian Note</a></small>`;
 
       const fields = { Front: frontHtml, Back: backHtml };
