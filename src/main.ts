@@ -8,7 +8,8 @@ import { TableToggleManager } from './table-toggle';
 const DECK_TAG = /#anki\/([^\s]+)/;
 const NOTE_ID_COMMENT = /<!--ANKI_NOTE_ID:(\d+)-->/;
 const NOTE_ID_COMMENT_GLOBAL = /<!--ANKI_NOTE_ID:(\d+)-->/g;
-const IMAGE_EMBED = /!\[\[([^|\]\n]+)(?:\|(\d+))?\]\]/g;
+const MEDIA_EMBED = /!\[\[([^|\]\n]+)(?:\|(\d+))?\]\]/g;
+const AUDIO_EXTENSIONS = new Set(['flac', 'm4a', 'mp3', 'ogg', 'wav', 'webm', '3gp']);
 const BLOCK_LATEX = /\$\$([\s\S]*?)\$\$/g;
 const INLINE_LATEX = /(?<![\$\\])\$([^$]+?)(?<!\\)\$/g;
 
@@ -403,39 +404,50 @@ export default class SimpleAnkiSyncPlugin extends Plugin {
     let out = text;
     const uploads: { ankiFileName: string; dataBase64: string }[] = [];
 
-    const matches = Array.from(text.matchAll(IMAGE_EMBED));
+    const matches = Array.from(text.matchAll(MEDIA_EMBED));
     for (const m of matches) {
       const [md, linkPath, size] = m;
-      const imageFile = this.app.metadataCache.getFirstLinkpathDest(
+      const mediaFile = this.app.metadataCache.getFirstLinkpathDest(
         linkPath,
         file.path
       );
-      if (!(imageFile instanceof TFile)) continue;
+      if (!(mediaFile instanceof TFile)) continue;
+
+      // Audio: emit [sound:...] (parsed by Anki before HTML, so no URL-encoding).
+      if (AUDIO_EXTENSIONS.has(mediaFile.extension.toLowerCase())) {
+        const buffer = await this.app.vault.readBinary(mediaFile);
+        uploads.push({
+          ankiFileName: mediaFile.name,
+          dataBase64: arrayBufferToBase64(buffer),
+        });
+        out = out.replace(md, `[sound:${mediaFile.name}]`);
+        continue;
+      }
 
       let dataBase64 = '';
-      let MathRandom = Math.floor(Math.random() * 10000000);
-      let ankiFileName = imageFile.name;
+      let ankiFileName = mediaFile.name;
 
       const windowAsAny = window as any;
-      const isExcalidraw = windowAsAny.ExcalidrawAutomate && windowAsAny.ExcalidrawAutomate.isExcalidrawFile(imageFile);
+      const isExcalidraw = windowAsAny.ExcalidrawAutomate && windowAsAny.ExcalidrawAutomate.isExcalidrawFile(mediaFile);
 
       if (isExcalidraw) {
         try {
           const ea = windowAsAny.ExcalidrawAutomate;
           // Scale 1.5 usually provides a good balance between quality and file size
-          const blob = await ea.createPNG(imageFile.path, 1.5);
+          const blob = await ea.createPNG(mediaFile.path, 1.5);
           const arrayBuffer = await blob.arrayBuffer();
 
           dataBase64 = arrayBufferToBase64(arrayBuffer);
-          ankiFileName = `${imageFile.basename}_${MathRandom}.png`;
+          const MathRandom = Math.floor(Math.random() * 10000000);
+          ankiFileName = `${mediaFile.basename}_${MathRandom}.png`;
         } catch (e) {
           console.error('Simple Anki Sync: Failed to generate PNG from Excalidraw file', e);
           // Fallback to reading the binary directly (which will be broken in Anki, but prevents a total crash)
-          const buffer = await this.app.vault.readBinary(imageFile);
+          const buffer = await this.app.vault.readBinary(mediaFile);
           dataBase64 = arrayBufferToBase64(buffer);
         }
       } else {
-        const buffer = await this.app.vault.readBinary(imageFile);
+        const buffer = await this.app.vault.readBinary(mediaFile);
         dataBase64 = arrayBufferToBase64(buffer);
       }
 
