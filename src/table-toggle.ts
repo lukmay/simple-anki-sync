@@ -8,9 +8,7 @@ const CLASS_COLLAPSED = 'is-collapsed';
 const CLASS_TRIGGER = 'row-toggle-trigger';
 const CLASS_BUTTON = 'row-toggle-button';
 const CLASS_TEXT = 'row-toggle-text';
-const CLASS_EDITING = 'is-editing';
 const MARKDOWN_VIEW_SELECTOR = '.markdown-preview-view, .markdown-source-view.mod-cm6';
-const EDITABLE_CELL_SELECTOR = 'td, th';
 const TOGGLE_LABEL = 'Toggle answer row';
 
 const STYLES = `
@@ -93,16 +91,25 @@ const STYLES = `
   overflow-x: clip;
 }
 
-.markdown-source-view.mod-cm6 .cm-table-widget table.${CLASS_TABLE} .${CLASS_TEXT} {
-  padding-left: 0;
-}
-
 .markdown-source-view.mod-cm6 .cm-table-widget table.${CLASS_TABLE} th .cm-line {
   padding-left: 0 !important;
 }
 
-.markdown-source-view.mod-cm6 .cm-table-widget table.${CLASS_TABLE} th.${CLASS_EDITING} .cm-line {
-  padding-left: 0 !important;
+/* Live Preview indicator: pseudo-element on the header cell (no injected DOM).
+   Avoids mutating the CM6 table-widget DOM, which corrupts cursor pos↔coord mapping. */
+.markdown-source-view.mod-cm6 .cm-table-widget table.${CLASS_TABLE} > thead > tr > th.${CLASS_TRIGGER}::before {
+  content: "v";
+  position: absolute;
+  left: 0.35em;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  line-height: 1;
+  font-size: 0.95em;
+}
+
+.markdown-source-view.mod-cm6 .cm-table-widget table.${CLASS_TABLE}.${CLASS_COLLAPSED} > thead > tr > th.${CLASS_TRIGGER}::before {
+  content: ">";
 }
 `;
 
@@ -236,8 +243,25 @@ export class TableToggleManager {
 
     table.dataset[DATA_APPLIED] = 'true';
     table.classList.add(CLASS_TABLE);
-
     headerCell.classList.add(CLASS_TRIGGER);
+
+    if (this.isInLivePreview(table)) {
+      this.attachLivePreviewToggle(table, headerCell);
+    } else {
+      this.decorateReadingViewHeader(table, headerCell);
+    }
+
+    this.setTableCollapsed(table, this.settings.defaultCollapsed);
+  }
+
+  private isInLivePreview(table: HTMLTableElement): boolean {
+    return table.closest('.markdown-source-view.mod-cm6') !== null;
+  }
+
+  private decorateReadingViewHeader(
+    table: HTMLTableElement,
+    headerCell: HTMLTableCellElement
+  ): void {
     headerCell.style.setProperty('padding-left', '1.2em', 'important');
 
     const textWrapper = this.wrapHeaderText(headerCell);
@@ -258,9 +282,40 @@ export class TableToggleManager {
     });
     toggleButton.addEventListener('pointerdown', stopEvent);
     toggleButton.addEventListener('mousedown', stopEvent);
+  }
 
-    this.bindEditingState(table, headerCell);
-    this.setTableCollapsed(table, this.settings.defaultCollapsed);
+  private attachLivePreviewToggle(
+    table: HTMLTableElement,
+    headerCell: HTMLTableCellElement
+  ): void {
+    // Deliberately no DOM mutation inside the CM6 table widget. Injecting a
+    // <button> or wrapping children in a <span> here breaks CodeMirror's
+    // pos↔coord mapping and causes ArrowDown below the card to snap the
+    // cursor back into the top cell. The arrow glyph is drawn via a CSS
+    // ::before pseudo-element on the header cell instead.
+    const toggle = () => {
+      this.setTableCollapsed(table, !table.classList.contains(CLASS_COLLAPSED));
+    };
+
+    const isInIndicatorZone = (event: MouseEvent): boolean => {
+      const rect = headerCell.getBoundingClientRect();
+      const fontSize = Number.parseFloat(getComputedStyle(headerCell).fontSize || '16');
+      return event.clientX - rect.left < fontSize * 1.6;
+    };
+
+    headerCell.addEventListener('click', (event) => {
+      if (!isInIndicatorZone(event)) return;
+      stopEvent(event);
+      toggle();
+    });
+    headerCell.addEventListener('pointerdown', (event) => {
+      if (!isInIndicatorZone(event)) return;
+      stopEvent(event);
+    });
+    headerCell.addEventListener('mousedown', (event) => {
+      if (!isInIndicatorZone(event)) return;
+      stopEvent(event);
+    });
   }
 
 
@@ -335,19 +390,6 @@ export class TableToggleManager {
     requestAnimationFrame(applySpacing);
   }
 
-  private bindEditingState(table: HTMLTableElement, headerCell: HTMLTableCellElement): void {
-    const updateEditingState = () => {
-      const active = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-      const activeCell = active?.closest(EDITABLE_CELL_SELECTOR) ?? null;
-      headerCell.classList.toggle(CLASS_EDITING, activeCell === headerCell);
-    };
-
-    table.addEventListener('focusin', updateEditingState);
-    table.addEventListener('focusout', () => {
-      setTimeout(updateEditingState, 0);
-    });
-  }
-
   private setTableCollapsed(table: HTMLTableElement, collapsed: boolean): void {
     table.classList.toggle(CLASS_COLLAPSED, collapsed);
     const button = table.querySelector(`.${CLASS_BUTTON}`) as HTMLButtonElement | null;
@@ -375,7 +417,7 @@ export class TableToggleManager {
 
       const headerCell = table.tHead?.rows?.[0]?.cells?.[0];
       if (headerCell) {
-        headerCell.classList.remove(CLASS_TRIGGER, CLASS_EDITING);
+        headerCell.classList.remove(CLASS_TRIGGER);
         const button = headerCell.querySelector(`.${CLASS_BUTTON}`);
         if (button) {
           button.remove();
