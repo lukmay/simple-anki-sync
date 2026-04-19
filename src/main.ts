@@ -1,8 +1,9 @@
-﻿import { Plugin, TFile, MarkdownView, Notice, arrayBufferToBase64, ObsidianProtocolData } from 'obsidian';
+﻿import { Plugin, TFile, MarkdownView, Notice, arrayBufferToBase64, ObsidianProtocolData, parseLinktext } from 'obsidian';
 import { AnkiService } from './anki-service';
 import { ObsidianNote, ProcessedMediaResult } from './types';
 import { DEFAULT_SETTINGS, SimpleAnkiSyncSettingTab, SimpleAnkiSyncSettings } from './settings';
 import { TableToggleManager } from './table-toggle';
+import { isExcalidrawFile, renderExcalidrawPng } from './excalidraw';
 
 // Regex-Templates
 const DECK_TAG = /#anki\/([^\s]+)/;
@@ -406,7 +407,8 @@ export default class SimpleAnkiSyncPlugin extends Plugin {
 
     const matches = Array.from(text.matchAll(MEDIA_EMBED));
     for (const m of matches) {
-      const [md, linkPath, size] = m;
+      const [md, rawLinkpath, size] = m;
+      const { path: linkPath, subpath } = parseLinktext(rawLinkpath);
       const mediaFile = this.app.metadataCache.getFirstLinkpathDest(
         linkPath,
         file.path
@@ -427,22 +429,15 @@ export default class SimpleAnkiSyncPlugin extends Plugin {
       let dataBase64 = '';
       let ankiFileName = mediaFile.name;
 
-      const windowAsAny = window as any;
-      const isExcalidraw = windowAsAny.ExcalidrawAutomate && windowAsAny.ExcalidrawAutomate.isExcalidrawFile(mediaFile);
-
-      if (isExcalidraw) {
+      if (isExcalidrawFile(mediaFile)) {
         try {
-          const ea = windowAsAny.ExcalidrawAutomate;
-          // Scale 1.5 usually provides a good balance between quality and file size
-          const blob = await ea.createPNG(mediaFile.path, 1.5);
-          const arrayBuffer = await blob.arrayBuffer();
-
-          dataBase64 = arrayBufferToBase64(arrayBuffer);
-          const MathRandom = Math.floor(Math.random() * 10000000);
-          ankiFileName = `${mediaFile.basename}_${MathRandom}.png`;
+          const { blob, fragmentSuffix } = await renderExcalidrawPng(mediaFile, subpath);
+          dataBase64 = arrayBufferToBase64(await blob.arrayBuffer());
+          const rand = Math.floor(Math.random() * 10000000);
+          ankiFileName = `${mediaFile.basename}${fragmentSuffix}_${rand}.png`;
         } catch (e) {
           console.error('Simple Anki Sync: Failed to generate PNG from Excalidraw file', e);
-          // Fallback to reading the binary directly (which will be broken in Anki, but prevents a total crash)
+          // Fallback so the card still syncs (the broken binary just won't render).
           const buffer = await this.app.vault.readBinary(mediaFile);
           dataBase64 = arrayBufferToBase64(buffer);
         }
