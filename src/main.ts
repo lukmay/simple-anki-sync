@@ -22,7 +22,7 @@ export default class SimpleAnkiSyncPlugin extends Plugin {
 
   async onload() {
     console.log('Loading Simple Anki Sync Plugin');
-    this.anki = new AnkiService(this.app);
+    this.anki = new AnkiService();
 
     await this.loadSettings();
 

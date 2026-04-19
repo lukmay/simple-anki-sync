@@ -1,4 +1,4 @@
-import { Notice, TFile, App } from 'obsidian';
+import { Notice } from 'obsidian';
 
 const ANKI_CONNECT_URL = 'http://127.0.0.1:8765';
 const MANAGED_NOTE_TAG = 'obsidian_simple_anki_sync_created';
@@ -29,8 +29,6 @@ async function sendRequest(action: string, params: any = {}): Promise<any> {
 }
 
 export class AnkiService {
-  constructor(private app: App) {}
-
   async verifyConnection(): Promise<boolean> {
     try {
       await sendRequest('requestPermission');
@@ -40,16 +38,6 @@ export class AnkiService {
       new Notice('AnkiConnect connection failed. Is Anki open with AnkiConnect installed?');
       console.error('verifyConnection error:', err);
       return false;
-    }
-  }
-
-  async fetchDecks(): Promise<string[]> {
-    try {
-      return await sendRequest('deckNames');
-    } catch (err) {
-      new Notice('Failed to retrieve deck list from Anki.');
-      console.error(err);
-      return [];
     }
   }
 
@@ -125,17 +113,6 @@ export class AnkiService {
     }
   }
 
-  async findManagedNotes(): Promise<number[]> {
-    try {
-      const result = await sendRequest('findNotes', { query: `tag:${MANAGED_NOTE_TAG}` });
-      return Array.isArray(result) ? result : [];
-    } catch (err) {
-      new Notice('Could not find managed notes in Anki.');
-      console.error(err);
-      return [];
-    }
-  }
-
   async changeDeck(cardIds: number[], deckName: string): Promise<boolean> {
     try {
       const ok = await sendRequest('changeDeck', { cards: cardIds, deck: deckName });
@@ -172,15 +149,5 @@ export class AnkiService {
       console.error(err);
       return null;
     }
-  }
-
-  resolveAbsolutePath(vaultPath: string): string | null {
-    const file = this.app.vault.getAbstractFileByPath(vaultPath);
-    if (file instanceof TFile) {
-      // @ts-ignore
-      return this.app.vault.adapter.getFullPath(file.path);
-    }
-    console.warn(`File not found in vault: ${vaultPath}`);
-    return null;
   }
 }

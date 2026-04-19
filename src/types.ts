@@ -1,10 +1,3 @@
-export interface AnkiNote {
-  noteId?: number;
-  front: string;
-  back: string;
-  deckName: string;
-}
-
 export interface ObsidianNote {
   sourceId: string;
   front: string;
