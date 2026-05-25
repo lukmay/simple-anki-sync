@@ -14,11 +14,10 @@ const AUDIO_EXTENSIONS = new Set(['flac', 'm4a', 'mp3', 'ogg', 'wav', 'webm', '3
 const BLOCK_LATEX = /\$\$([\s\S]*?)\$\$/g;
 const INLINE_LATEX = /(?<![\$\\])\$([^$]+?)(?<!\\)\$/g;
 
-const DEFAULT_MODEL = 'Basic';
 const EMPTY_ANKI_BLOCK = `|     |\n| --- |\n|     |`;
 
 export default class SimpleAnkiSyncPlugin extends Plugin {
-  private anki!: AnkiService;
+  anki!: AnkiService;
   public settings: SimpleAnkiSyncSettings = DEFAULT_SETTINGS;
   private tableToggle!: TableToggleManager;
 
@@ -532,7 +531,7 @@ export default class SimpleAnkiSyncPlugin extends Plugin {
           await this.anki.changeDeck([note.noteId], deckName);
         }
       } else {
-        const created = await this.anki.addNote(deckName, DEFAULT_MODEL, fields);
+        const created = await this.anki.addNote(deckName, this.settings.defaultModel || 'Basic', fields);
         if (created) {
           newIds.push(created);
           const dataRowIndex = note.startLine + 2;

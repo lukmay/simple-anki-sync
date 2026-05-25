@@ -1,4 +1,5 @@
 {
   "enableAnswerToggle": true,
-  "defaultCollapsed": false
+  "defaultCollapsed": false,
+  "defaultModel": "Basic"
 }

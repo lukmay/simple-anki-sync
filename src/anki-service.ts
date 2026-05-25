@@ -134,6 +134,10 @@ export class AnkiService {
     }
   }
 
+  async getModelNames(): Promise<string[]> {
+    return sendRequest('modelNames');
+  }
+
   async storeMediaBase64(
     filename: string,
     data: string
