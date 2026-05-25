@@ -2,6 +2,7 @@
 
 <img alt="Showcse" src="https://github.com/user-attachments/assets/3e3d45fd-b24a-4c44-8bdf-cdf45fbfdaa8" />
 
+# Simple Anki Sync
 
 Simple Anki Sync for Obsidian delivers the most straightforward way to keep your flashcards in sync without ever breaking your flow. By using a single, minimal Markdown-table format and supporting only Basic cards, you’ll spend zero time tweaking settings and 100 % of your time learning.
 
