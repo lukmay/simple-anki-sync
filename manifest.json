@@ -5,6 +5,6 @@
   "minAppVersion": "0.15.0",
   "description": "The simplest way of syncing simple Flashchards with Anki.",
   "author": "Lukas Mayr",
-  "authorUrl": "lukas-mayr.com",
+  "authorUrl": "https://lukas-mayr.com",
   "isDesktopOnly": true
 }
