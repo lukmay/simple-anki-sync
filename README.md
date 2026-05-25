@@ -85,7 +85,12 @@ This removes all Anki note references from the file and deletes the correspondin
 - [x] Automatic deletion
     Delete a card in Obsidian and the corresponding Anki card is removed on sync. **IMPORTANT: don't delete the Anki-ID below manually**
 - **Precise Backlinks**  
-    Each card carries a URL back to its source note. Clicking it from Anki will open Obsidian and scroll you down directly to the flashcard's exact row!
+    Each card carries a URL back to its source note. Clicking it from Anki will open Obsidian and scroll you down directly to the flashcard's exact row!  
+    <img width="800" alt="jump-to-obsidian" src="https://github.com/user-attachments/assets/3093f5c9-74e7-4c71-ad23-75aabbb98a61" />
+
+
+
+
 - **Anki-Tags**  
     Each card in Anki has a assigned tag `obsidian_simple_anki_sync_created` to easely filter for this automatically created cards.
 
