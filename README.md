@@ -1,4 +1,3 @@
-
 <video controls>
   <source src="https://github.com/user-attachments/assets/790abb16-b7ea-43d2-995c-720ac1c9b2ed" type="video/mp4">
 </video>
@@ -12,6 +11,9 @@
 
 
 ![image](images/title.png)
+
+
+<img alt="Showcse" src="https://github.com/user-attachments/assets/3e3d45fd-b24a-4c44-8bdf-cdf45fbfdaa8" />
 
 
 Simple Anki Sync for Obsidian delivers the most straightforward way to keep your flashcards in sync without ever breaking your flow. By using a single, minimal Markdown-table format and supporting only Basic cards, you’ll spend zero time tweaking settings and 100 % of your time learning.
