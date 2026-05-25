@@ -1,17 +1,4 @@
-<video controls>
-  <source src="https://github.com/user-attachments/assets/790abb16-b7ea-43d2-995c-720ac1c9b2ed" type="video/mp4">
-</video>
-
-# Simple Anki Sync - Obsidian Plugin
-> **⚠️ Prerequisite**: Anki must be running with the AnkiConnect extension installed and active.
-> 
-> - Install from [AnkiWeb](https://ankiweb.net/shared/info/2055492159)
-> - More details: [AnkiConnect homepage](https://git.sr.ht/~foosoft/anki-connect)
->
-
-
 ![image](images/title.png)
-
 
 <img alt="Showcse" src="https://github.com/user-attachments/assets/3e3d45fd-b24a-4c44-8bdf-cdf45fbfdaa8" />
 
@@ -21,10 +8,13 @@ Simple Anki Sync for Obsidian delivers the most straightforward way to keep your
 With a single command, you can instantly push your notes to AnkiConnect—no background daemons, no surprises.
 Just run a command to sync the entire vault or your current file, and watch your flashcards update in seconds. Study smarter, stay focused, and let the plugin handle the rest.
 
-For useage make sure Anki is running & User the following commands:  
-`Sync current file With Anki`  
-`Sync entire vault With Anki`  
+___
 
+> **⚠️ Prerequisite**: Anki must be running with the AnkiConnect extension installed and active.
+> 
+> - Install from [AnkiWeb](https://ankiweb.net/shared/info/2055492159)
+> - More details: [AnkiConnect homepage](https://git.sr.ht/~foosoft/anki-connect)
+>
 
 
 
@@ -33,52 +23,7 @@ ___
 
 ## Automatic installation via the Obsidian App (Recomendet)
 
-
-
 https://github.com/user-attachments/assets/aebca7a1-14c3-4023-b27a-eade3b551b3c
-
-
-
-
-
-
-
-## Manual installation (not recomendet)
-1.  **Open Terminal in Obsidian Plugins Folder:**
-    *   Navigate to your Obsidian vault's plugin folder in your terminal or command prompt. This is usually located at:
-        `<YourVault>/.obsidian/plugins/`
-    *   For example:
-        ```bash
-        cd path/to/your/vault/.obsidian/plugins/
-        ```
-
-2.  **Clone the Repository:**
-    *   Clone this repository directly into the `plugins` folder:
-        ```bash
-        git clone https://github.com/lukmay/simple-anki-sync.git
-        ```
-
-3.  **Navigate into Plugin Folder & Build:**
-    *   Change directory into the newly cloned plugin folder:
-        ```bash
-        cd simple-anki-sync
-        ```
-    *   Run the following commands to install dependencies and build the plugin:
-        ```bash
-        npm install
-        ```
-        Then:
-        ```bash
-        npm run build
-        ```
-        This will create the necessary `main.js` file within the `simple-anki-sync` folder.
-
-4.  **Enable in Obsidian:**
-    *   **Ensure Anki is running.** (And the AnkiConnect add-on is installed and configured in Anki).
-    *   Restart Obsidian or reload its plugins (e.g., by toggling "Community Plugins" off and on).
-    *   Go to `Settings > Community plugins` in Obsidian.
-    *   Find "Simple Anki Sync" in the list and toggle it on.
-
 
 
 ___
@@ -154,45 +99,6 @@ ___
 # Video Showcase :)
 
 https://github.com/user-attachments/assets/790abb16-b7ea-43d2-995c-720ac1c9b2ed
-
-
-
-
-
-# Quantum Mechanics Cheat Sheet
-
----
-
-<!-- Define your deck and optional subdeck here: -->
-#anki/Physics/Quantum <-- never forget to set a deck!
-
-Welcome to your quantum mechanics flashcards. Write each card as a minimal Markdown table, then run **Sync Anki Cards**.
-
----
-
-## Card Examples
-
-### 1. Basic definition
-
-| What is the Heisenberg uncertainty principle? |
-| ---------------------------------------------- |
-| It states that you cannot simultaneously know the exact position and momentum of a particle. |
-
-### 2. Math formatting
-
-| Solve for $x$ in the quadratic formula: $x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}$ |
-| ---------------------------------------------------------------------------------- |
-| Use the plus/minus to get both roots: $x_1 = \frac{-b + \sqrt{b^2 - 4ac}}{2a},\; x_2 = \frac{-b - \sqrt{b^2 - 4ac}}{2a}$ |
-
-### 3. Line breaks & images
-
-| What does a particle-in-a-box wavefunction look like?<br><br>Label the nodal points. |
-| -------------------------------------------------------------------------------------- |
-| See diagram:<br><br>![[particle_box.png]]<br><br>The \(n\)th state has \(n-1\) nodes. |
-
-Note you can set the size of images as following:   
-![[particle_box.png]] <-- default   
-![[particle_box.png|200]] <-- resized
 
 ---
 
