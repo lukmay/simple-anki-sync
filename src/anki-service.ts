@@ -66,7 +66,12 @@ export class AnkiService {
       new Notice('AnkiConnect did not return a valid note ID.');
       return null;
     } catch (err) {
-      new Notice(`Failed to add note: ${err instanceof Error ? err.message : err}`);
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes('cannot create note because it is empty')) {
+        new Notice(`Note type "${model}" has incompatible fields. Only types with "Front" and "Back" fields are supported.`);
+      } else {
+        new Notice(`Failed to add note: ${msg}`);
+      }
       console.error(err);
       return null;
     }
