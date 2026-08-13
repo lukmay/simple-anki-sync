@@ -44,6 +44,7 @@ Thumbs.db
 # Testing
 /junit-report.xml
 /karma-coverage/
+/.test-dist/
 
 # Optional: lockfiles if you prefer Yarn/PNPM
 package-lock.json

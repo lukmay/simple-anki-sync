@@ -4,6 +4,7 @@ import { ObsidianNote, ProcessedMediaResult } from './types';
 import { DEFAULT_SETTINGS, SimpleAnkiSyncSettingTab, SimpleAnkiSyncSettings } from './settings';
 import { TableToggleManager } from './table-toggle';
 import { isExcalidrawFile, renderExcalidrawPng } from './excalidraw';
+import { decodeDeckTag } from './deck-name';
 
 // Regex-Templates
 const DECK_TAG = /#anki\/([^\s]+)/;
@@ -338,7 +339,7 @@ export default class SimpleAnkiSyncPlugin extends Plugin {
     file: TFile
   ): { notes: ObsidianNote[]; deckName: string | null } {
     const tagMatch = content.match(DECK_TAG);
-    const deckName = tagMatch?.[1]?.replace(/\//g, '::') ?? null;
+    const deckName = tagMatch?.[1] ? decodeDeckTag(tagMatch[1]) : null;
     const notes: ObsidianNote[] = [];
     const lines = content.split('\n');
 

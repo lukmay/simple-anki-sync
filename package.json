@@ -5,7 +5,8 @@
   "main": "main.js",
   "scripts": {
     "dev": "rollup -c rollup.config.mjs -w",
-    "build": "rollup -c rollup.config.mjs --environment NODE_ENV:production"
+    "build": "rollup -c rollup.config.mjs --environment NODE_ENV:production",
+    "test": "tsc -p tsconfig.test.json && node --test .test-dist/tests/deck-name.test.js"
   },
   "keywords": [
     "obsidian-plugin",

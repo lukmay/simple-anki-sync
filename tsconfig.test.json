@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "commonjs",
+    "outDir": ".test-dist",
+    "rootDir": ".",
+    "sourceMap": false
+  },
+  "include": [
+    "src/deck-name.ts",
+    "tests/**/*.ts"
+  ]
+}

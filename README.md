@@ -42,6 +42,15 @@ Sync any minimal Markdown table from Obsidian into Anki as Basic cards. Just tag
 
 `#anki/MyDeck/Subdeck`
 
+Forward slashes create Anki subdecks. To include spaces in a deck name, write a
+double hyphen (`--`); single hyphens and underscores remain literal:
+
+```text
+#anki/Books/Causal--Inference  ->  Books::Causal Inference
+#anki/Books/Pre-Post--Analysis ->  Books::Pre-Post Analysis
+#anki/Books/snake_case         ->  Books::snake_case
+```
+
 Then write your cards in this format:
 
 ```markdown
