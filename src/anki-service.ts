@@ -107,7 +107,7 @@ export class AnkiService {
     }
   }
 
-  async fetchNotesInfo(ids: number[]): Promise<Array<{ noteId: number; fields: any; modelName: string; tags: string[] }>> {
+  async fetchNotesInfo(ids: number[]): Promise<Array<{ noteId: number; fields: any; modelName: string; tags: string[]; cards: number[] }>> {
     if (!ids.length) return [];
     try {
       return await sendRequest('notesInfo', { notes: ids });

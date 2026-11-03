@@ -526,9 +526,14 @@ export default class SimpleAnkiSyncPlugin extends Plugin {
       if (note.noteId) {
         await this.anki.updateNote(note.noteId, fields);
         newIds.push(note.noteId);
-        const info = await this.anki.fetchCardInfo([note.noteId]);
-        if (info[0]?.deckName !== deckName) {
-          await this.anki.changeDeck([note.noteId], deckName);
+        // changeDeck/cardsInfo take card IDs, which are not guaranteed to equal the note ID
+        const [noteInfo] = await this.anki.fetchNotesInfo([note.noteId]);
+        const cardIds = noteInfo?.cards ?? [];
+        if (cardIds.length) {
+          const info = await this.anki.fetchCardInfo(cardIds);
+          if (info.some(c => c.deckName !== deckName)) {
+            await this.anki.changeDeck(cardIds, deckName);
+          }
         }
       } else {
         const created = await this.anki.addNote(deckName, this.settings.defaultModel || 'Basic', fields);
